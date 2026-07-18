@@ -24,6 +24,12 @@ test("ships the focused two-tab Japanese experience", async () => {
   assert.match(app, /THEME_ANALYSIS_WINDOW/);
   assert.match(app, /THEME_STOP_WORDS/);
   assert.match(app, /HAS_TOPIC_CHARACTER/);
+  assert.match(app, /ENTRIES_FOR_CURRENT_CENTER = 10/);
+  assert.match(app, /analyzeCurrentCenter/);
+  assert.match(app, /今の気持ちの中心/);
+  assert.match(app, /楽しかった/);
+  assert.match(app, /entry\.source !== "sample"/);
+  assert.match(app, /あと\{ENTRIES_FOR_CURRENT_CENTER - personalEntries\.length\}件/);
   assert.match(app, /思考のこだま/);
   assert.match(app, /前にも、似た思考がありました/);
   assert.match(app, /この思考につながる記録/);

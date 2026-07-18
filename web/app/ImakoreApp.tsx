@@ -24,9 +24,17 @@ type RelatedThought = {
   score: number;
 };
 
+type CenterInsight = {
+  headline: string;
+  description: string;
+  topic?: { label: string; count: number };
+  emotion?: { label: string; count: number };
+};
+
 const ENTRIES_KEY = "imakore.thoughts.v1";
 const DRAFT_KEY = "imakore.draft.v1";
 const MINIMUM_ENTRIES_FOR_INSIGHTS = 3;
+const ENTRIES_FOR_CURRENT_CENTER = 10;
 const THEME_ANALYSIS_WINDOW = 40;
 const MAX_IMPORT_BYTES = 1_000_000;
 const MAX_IMPORT_ENTRIES = 5_000;
@@ -105,6 +113,41 @@ const THEME_STOP_WORDS = new Set([
   "必要",
 ]);
 const HAS_TOPIC_CHARACTER = /[\p{Script=Han}\p{Script=Katakana}A-Za-z]/u;
+const EMOTION_SIGNALS = [
+  {
+    label: "楽しさ",
+    terms: ["楽しい", "楽しかった", "うれしい", "嬉しい", "わくわく", "ワクワク"],
+  },
+  {
+    label: "モヤモヤ",
+    terms: ["モヤモヤ", "もやもや", "迷い", "迷って", "引っかかる"],
+  },
+  {
+    label: "不安",
+    terms: ["不安", "心配", "怖い", "こわい", "落ち着かない"],
+  },
+  {
+    label: "疲れ",
+    terms: ["疲れ", "しんどい", "つらい", "辛い", "大変"],
+  },
+  {
+    label: "落ち着き",
+    terms: ["落ち着", "穏やか", "安心", "静か", "軽くな"],
+  },
+  {
+    label: "前向きな気持ち",
+    terms: ["やりたい", "楽しみ", "希望", "試したい", "進みたい"],
+  },
+] as const;
+const EMOTION_TOPIC_WORDS = new Set([
+  "モヤモヤ",
+  "不安",
+  "心配",
+  "疲れ",
+  "安心",
+  "静か",
+  "楽しみ",
+]);
 
 function readEntries(): ThoughtEntry[] {
   try {
@@ -303,6 +346,73 @@ function analyzeThemes(entries: ThoughtEntry[]): ThemeInsight[] {
     }));
 }
 
+function analyzeCurrentCenter(entries: ThoughtEntry[]): CenterInsight | null {
+  if (entries.length < ENTRIES_FOR_CURRENT_CENTER) return null;
+
+  const recentEntries = [...entries]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+    .slice(0, ENTRIES_FOR_CURRENT_CENTER);
+  const topic = analyzeThemes(recentEntries).find(
+    (theme) => !EMOTION_TOPIC_WORDS.has(theme.word),
+  );
+  const emotions = EMOTION_SIGNALS.map((signal) => {
+    let count = 0;
+    let recencyScore = 0;
+
+    recentEntries.forEach((entry, index) => {
+      const normalizedBody = entry.body.normalize("NFKC").toLocaleLowerCase("ja-JP");
+      const appears = signal.terms.some((term) =>
+        normalizedBody.includes(term.normalize("NFKC").toLocaleLowerCase("ja-JP")),
+      );
+      if (!appears) return;
+
+      count += 1;
+      recencyScore += 1 - index / ENTRIES_FOR_CURRENT_CENTER;
+    });
+
+    return { label: signal.label, count, recencyScore };
+  })
+    .filter((emotion) => emotion.count >= 2)
+    .sort(
+      (a, b) =>
+        b.count - a.count || b.recencyScore - a.recencyScore,
+    );
+  const emotion = emotions[0];
+
+  if (topic && emotion) {
+    return {
+      headline: `「${topic.word}」と、${emotion.label}が今の中心にあります`,
+      description: `直近10件では「${topic.word}」が${topic.entryIds.length}件、${emotion.label}を含む言葉が${emotion.count}件に現れました。`,
+      topic: { label: topic.word, count: topic.entryIds.length },
+      emotion: { label: emotion.label, count: emotion.count },
+    };
+  }
+
+  if (topic) {
+    return {
+      headline: `「${topic.word}」のことが、今の中心にあります`,
+      description: `直近10件のうち、${topic.entryIds.length}件に同じテーマが現れました。`,
+      topic: { label: topic.word, count: topic.entryIds.length },
+    };
+  }
+
+  if (emotion) {
+    return {
+      headline: `${emotion.label}が、今の気持ちの中心にあります`,
+      description: `直近10件のうち、${emotion.count}件に近い気持ちが現れました。`,
+      emotion: { label: emotion.label, count: emotion.count },
+    };
+  }
+
+  return {
+    headline: "いくつかの気持ちが、今ここに並んでいます",
+    description: "直近10件では、まだ一つの中心に絞らず、そのまま残しておける状態です。",
+  };
+}
+
 export function ImakoreApp() {
   const [tab, setTab] = useState<Tab>("capture");
   const [entries, setEntries] = useState<ThoughtEntry[]>([]);
@@ -367,6 +477,14 @@ export function ImakoreApp() {
   );
 
   const themeInsights = useMemo(() => analyzeThemes(entries), [entries]);
+  const personalEntries = useMemo(
+    () => entries.filter((entry) => entry.source !== "sample"),
+    [entries],
+  );
+  const currentCenter = useMemo(
+    () => analyzeCurrentCenter(personalEntries),
+    [personalEntries],
+  );
   const selectedTheme =
     themeInsights.find((theme) => theme.word === selectedThemeWord) ?? null;
   const themeFilteredEntries = selectedTheme
@@ -652,6 +770,41 @@ export function ImakoreApp() {
                     <p><strong>サンプル表示中</strong><span>分析の流れを試せます</span></p>
                     <button type="button" onClick={removeSampleEntries}>サンプルを消す</button>
                   </aside>
+                )}
+
+                {currentCenter ? (
+                  <section className="center-card" aria-labelledby="center-title">
+                    <p className="center-eyebrow">今の気持ちの中心</p>
+                    <h2 id="center-title">{currentCenter.headline}</h2>
+                    <p className="center-description">{currentCenter.description}</p>
+                    {(currentCenter.topic || currentCenter.emotion) && (
+                      <div className="center-signals" aria-label="中心として見つかった傾向">
+                        {currentCenter.topic && (
+                          <span>
+                            話題　{currentCenter.topic.label}
+                            <small>{currentCenter.topic.count}/10件</small>
+                          </span>
+                        )}
+                        {currentCenter.emotion && (
+                          <span>
+                            気持ち　{currentCenter.emotion.label}
+                            <small>{currentCenter.emotion.count}/10件</small>
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <p className="local-analysis-note">
+                      直近10件の言葉から、端末内で見つけた傾向です
+                    </p>
+                  </section>
+                ) : (
+                  <section className="center-progress" aria-labelledby="center-progress-title">
+                    <p>今の気持ちの中心</p>
+                    <h2 id="center-progress-title">
+                      あと{ENTRIES_FOR_CURRENT_CENTER - personalEntries.length}件ほど残すと、今の流れが見えてきます
+                    </h2>
+                    <small>急がなくて大丈夫。思いついたときに、そのまま残してください。</small>
+                  </section>
                 )}
 
                 {themeInsights.length > 0 && (

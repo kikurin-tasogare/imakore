@@ -365,6 +365,101 @@ textarea:focus {
   cursor: pointer;
 }
 
+.center-card {
+  margin: 2px 18px 18px;
+  padding: 21px 20px 19px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--hairline));
+  border-radius: 19px;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--accent) 11%, var(--surface)),
+      color-mix(in srgb, var(--accent) 4%, var(--surface))
+    );
+}
+
+.center-eyebrow {
+  margin: 0 0 9px;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.center-card h2 {
+  margin: 0;
+  font-size: 1.12rem;
+  line-height: 1.55;
+  letter-spacing: -0.015em;
+}
+
+.center-description {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+.center-signals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.center-signals span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--hairline));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.center-signals small {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 500;
+}
+
+.center-card .local-analysis-note {
+  margin-bottom: 0;
+}
+
+.center-progress {
+  margin: 2px 18px 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--surface-subtle);
+}
+
+.center-progress p {
+  margin: 0 0 7px;
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.center-progress h2 {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.center-progress small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.6;
+}
+
 .insight-card {
   margin: 2px 18px 18px;
   padding: 20px;
