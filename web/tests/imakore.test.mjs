@@ -21,6 +21,11 @@ test("ships the focused two-tab Japanese experience", async () => {
   assert.match(app, /exportEntries/);
   assert.match(app, /importEntries/);
   assert.match(app, /この端末内だけで分析しています/);
+  assert.match(app, /思考のこだま/);
+  assert.match(app, /前にも、似た思考がありました/);
+  assert.match(app, /この思考につながる記録/);
+  assert.match(app, /findRelatedThoughts/);
+  assert.match(app, /MAX_IMPORT_BYTES/);
   assert.doesNotMatch(app, /締切|優先度|タグ|カレンダー/);
 });
 
@@ -36,5 +41,6 @@ test("includes installable offline app metadata", async () => {
   assert.equal(manifest.lang, "ja");
   assert.match(serviceWorker, /caches\.open/);
   assert.match(serviceWorker, /event\.request\.mode === "navigate"/);
-  assert.match(serviceWorker, /imakore-v3/);
+  assert.match(serviceWorker, /imakore-v4/);
+  assert.match(serviceWorker, /url\.origin !== self\.location\.origin/);
 });

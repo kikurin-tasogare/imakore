@@ -1,4 +1,4 @@
-const CACHE_NAME = "imakore-v3";
+const CACHE_NAME = "imakore-v4";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
@@ -28,10 +28,16 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin) return;
+
+  const shouldCache =
+    APP_SHELL.includes(url.pathname) || url.pathname.startsWith("/assets/");
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        if (response.ok && new URL(event.request.url).origin === self.location.origin) {
+        if (response.ok && shouldCache) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         }

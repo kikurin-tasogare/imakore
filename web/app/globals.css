@@ -207,6 +207,118 @@ textarea:focus {
   font-size: 0.7rem;
 }
 
+.echo-panel {
+  margin: 4px 0 28px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--hairline));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+  animation: echo-in 260ms ease-out;
+}
+
+.detail-content > .echo-panel {
+  margin-top: 28px;
+  margin-bottom: 8px;
+}
+
+.echo-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.echo-eyebrow {
+  margin: 0 0 6px;
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.echo-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.echo-dismiss {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  margin: -8px -8px 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.echo-description {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.echo-list {
+  display: grid;
+  gap: 8px;
+  margin: 15px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.echo-list button {
+  width: 100%;
+  display: grid;
+  gap: 6px;
+  padding: 13px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 13px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 110ms ease, background 110ms ease;
+}
+
+.echo-list button:active {
+  transform: scale(0.985);
+  background: var(--surface-subtle);
+}
+
+.echo-words {
+  overflow: hidden;
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.echo-body {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.echo-list time {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.echo-panel .local-analysis-note {
+  margin-bottom: 0;
+}
+
 .thought-list {
   display: grid;
   gap: 12px;
@@ -901,5 +1013,16 @@ textarea:focus {
   to {
     opacity: 1;
     transform: scale(1.1);
+  }
+}
+
+@keyframes echo-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

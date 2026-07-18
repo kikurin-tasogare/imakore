@@ -18,9 +18,21 @@ type ThemeInsight = {
   occurrences: number;
 };
 
+type RelatedThought = {
+  entry: ThoughtEntry;
+  sharedWords: string[];
+  score: number;
+};
+
 const ENTRIES_KEY = "imakore.thoughts.v1";
 const DRAFT_KEY = "imakore.draft.v1";
 const MINIMUM_ENTRIES_FOR_INSIGHTS = 3;
+const MAX_IMPORT_BYTES = 1_000_000;
+const MAX_IMPORT_ENTRIES = 5_000;
+const MAX_IMPORTED_BODY_CHARACTERS = 20_000;
+const JAPANESE_WORD_SEGMENTER = new Intl.Segmenter("ja", {
+  granularity: "word",
+});
 const STOP_WORDS = new Set([
   "あの",
   "ある",
@@ -30,6 +42,7 @@ const STOP_WORDS = new Set([
   "ここ",
   "こと",
   "これ",
+  "した",
   "したい",
   "して",
   "する",
@@ -40,8 +53,10 @@ const STOP_WORDS = new Set([
   "ため",
   "ちゃんと",
   "でも",
+  "では",
   "です",
   "ない",
+  "なく",
   "なる",
   "ので",
   "まだ",
@@ -49,7 +64,11 @@ const STOP_WORDS = new Set([
   "もう",
   "もの",
   "もっと",
+  "みたい",
   "よう",
+  "やる",
+  "より",
+  "って",
   "感じる",
   "感じて",
   "気持ち",
@@ -150,6 +169,59 @@ function formatLongDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function meaningfulWords(body: string): string[] {
+  const words = new Set<string>();
+
+  for (const segment of JAPANESE_WORD_SEGMENTER.segment(body.normalize("NFKC"))) {
+    if (!segment.isWordLike) continue;
+
+    const word = segment.segment.toLocaleLowerCase("ja-JP").trim();
+    if (
+      Array.from(word).length < 2 ||
+      STOP_WORDS.has(word) ||
+      /^\d+$/u.test(word)
+    ) {
+      continue;
+    }
+    words.add(word);
+  }
+
+  return [...words];
+}
+
+function findRelatedThoughts(
+  target: ThoughtEntry,
+  entries: ThoughtEntry[],
+  limit = 3,
+): RelatedThought[] {
+  const targetWords = new Set(meaningfulWords(target.body));
+  if (targetWords.size === 0) return [];
+
+  return entries
+    .filter((entry) => entry.id !== target.id)
+    .map((entry) => {
+      const candidateWords = meaningfulWords(entry.body);
+      const sharedWords = candidateWords.filter((word) => targetWords.has(word));
+      const sharedCharacterCount = sharedWords.reduce(
+        (total, word) => total + Array.from(word).length,
+        0,
+      );
+      const score =
+        sharedWords.length * 10 +
+        sharedCharacterCount -
+        Math.abs(candidateWords.length - targetWords.size) * 0.1;
+      return { entry, sharedWords, score };
+    })
+    .filter((result) => result.sharedWords.length > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        new Date(b.entry.createdAt).getTime() -
+          new Date(a.entry.createdAt).getTime(),
+    )
+    .slice(0, limit);
+}
+
 function analyzeThemes(entries: ThoughtEntry[]): ThemeInsight[] {
   if (entries.length < MINIMUM_ENTRIES_FOR_INSIGHTS) return [];
 
@@ -157,23 +229,8 @@ function analyzeThemes(entries: ThoughtEntry[]): ThemeInsight[] {
     string,
     { entryIds: Set<string>; occurrences: number }
   >();
-  const segmenter = new Intl.Segmenter("ja", { granularity: "word" });
-
   entries.forEach((entry) => {
-    const wordsInEntry = new Set<string>();
-
-    for (const segment of segmenter.segment(entry.body.normalize("NFKC"))) {
-      if (!segment.isWordLike) continue;
-
-      const word = segment.segment.toLocaleLowerCase("ja-JP").trim();
-      if (
-        Array.from(word).length < 2 ||
-        STOP_WORDS.has(word) ||
-        /^\d+$/u.test(word)
-      ) {
-        continue;
-      }
-
+    meaningfulWords(entry.body).forEach((word) => {
       const current = themes.get(word) ?? {
         entryIds: new Set<string>(),
         occurrences: 0,
@@ -181,8 +238,7 @@ function analyzeThemes(entries: ThoughtEntry[]): ThemeInsight[] {
       current.occurrences += 1;
       current.entryIds.add(entry.id);
       themes.set(word, current);
-      wordsInEntry.add(word);
-    }
+    });
   });
 
   return [...themes.entries()]
@@ -210,6 +266,7 @@ export function ImakoreApp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dataMessage, setDataMessage] = useState("");
   const [savedMessage, setSavedMessage] = useState(false);
+  const [lastSavedId, setLastSavedId] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -246,6 +303,21 @@ export function ImakoreApp() {
     [entries, selectedId],
   );
 
+  const selectedEntryEchoes = useMemo(
+    () =>
+      selectedEntry ? findRelatedThoughts(selectedEntry, entries) : [],
+    [entries, selectedEntry],
+  );
+  const lastSavedEntry = useMemo(
+    () => entries.find((entry) => entry.id === lastSavedId) ?? null,
+    [entries, lastSavedId],
+  );
+  const lastSavedEchoes = useMemo(
+    () =>
+      lastSavedEntry ? findRelatedThoughts(lastSavedEntry, entries, 2) : [],
+    [entries, lastSavedEntry],
+  );
+
   const themeInsights = useMemo(() => analyzeThemes(entries), [entries]);
   const selectedTheme =
     themeInsights.find((theme) => theme.word === selectedThemeWord) ?? null;
@@ -273,6 +345,7 @@ export function ImakoreApp() {
 
   function updateDraft(value: string) {
     setDraft(value);
+    if (value.trim()) setLastSavedId(null);
     if (value) {
       window.localStorage.setItem(DRAFT_KEY, value);
     } else {
@@ -292,6 +365,7 @@ export function ImakoreApp() {
       updatedAt: now,
     };
     commitEntries([entry, ...entries]);
+    setLastSavedId(entry.id);
     updateDraft("");
     textareaRef.current?.blur();
 
@@ -385,6 +459,7 @@ export function ImakoreApp() {
 
   async function importEntries(file: File) {
     try {
+      if (file.size > MAX_IMPORT_BYTES) throw new Error("file too large");
       const parsed = JSON.parse(await file.text()) as unknown;
       const candidates = Array.isArray(parsed)
         ? parsed
@@ -393,7 +468,16 @@ export function ImakoreApp() {
           : null;
       if (!Array.isArray(candidates)) throw new Error("invalid file");
 
-      const imported = candidates.filter(isThoughtEntry);
+      if (candidates.length > MAX_IMPORT_ENTRIES) {
+        throw new Error("too many entries");
+      }
+
+      const imported = candidates.filter(
+        (candidate): candidate is ThoughtEntry =>
+          isThoughtEntry(candidate) &&
+          Array.from(candidate.body).length <= MAX_IMPORTED_BODY_CHARACTERS &&
+          candidate.id.length <= 128,
+      );
       if (imported.length === 0) throw new Error("no entries");
 
       const merged = new Map(entries.map((entry) => [entry.id, entry]));
@@ -432,6 +516,8 @@ export function ImakoreApp() {
             onCancelEditing={() => setEditing(false)}
             onSaveEdit={saveEdit}
             onDelete={deleteEntry}
+            relatedThoughts={selectedEntryEchoes}
+            onOpenRelated={openEntry}
           />
         ) : tab === "capture" ? (
           <section className="screen capture-screen" aria-labelledby="capture-title">
@@ -474,6 +560,16 @@ export function ImakoreApp() {
                 <span className="checkmark" aria-hidden="true">✓</span>
                 残しました
               </div>
+
+              {lastSavedEntry && lastSavedEchoes.length > 0 && (
+                <EchoPanel
+                  title="前にも、似た思考がありました"
+                  description="過去の自分から返ってきた、思考のこだまです。"
+                  relatedThoughts={lastSavedEchoes}
+                  onOpen={openEntry}
+                  onDismiss={() => setLastSavedId(null)}
+                />
+              )}
             </div>
           </section>
         ) : (
@@ -512,7 +608,7 @@ export function ImakoreApp() {
 
                 {themeInsights.length > 0 && (
                   <section className="insight-card" aria-labelledby="insight-title">
-                    <p className="insight-eyebrow">今の流れ</p>
+                    <p className="insight-eyebrow">思考の流れ</p>
                     <h2 id="insight-title">最近、何度も現れていること</h2>
                     <p className="insight-description">
                       言葉を押すと、関係する思考を振り返れます。
@@ -652,6 +748,8 @@ type DetailViewProps = {
   onCancelEditing: () => void;
   onSaveEdit: () => void;
   onDelete: () => void;
+  relatedThoughts: RelatedThought[];
+  onOpenRelated: (id: string) => void;
 };
 
 function DetailView({
@@ -664,6 +762,8 @@ function DetailView({
   onCancelEditing,
   onSaveEdit,
   onDelete,
+  relatedThoughts,
+  onOpenRelated,
 }: DetailViewProps) {
   return (
     <section className="screen detail-screen" aria-labelledby="detail-title">
@@ -718,12 +818,68 @@ function DetailView({
           <time dateTime={entry.createdAt}>{formatLongDateTime(entry.createdAt)}</time>
         </div>
 
+        {!editing && relatedThoughts.length > 0 && (
+          <EchoPanel
+            title="この思考につながる記録"
+            description="同じ言葉が現れた過去の思考です。"
+            relatedThoughts={relatedThoughts}
+            onOpen={onOpenRelated}
+          />
+        )}
+
         {!editing && (
           <button type="button" className="delete-button" onClick={onDelete}>
             削除
           </button>
         )}
       </div>
+    </section>
+  );
+}
+
+type EchoPanelProps = {
+  title: string;
+  description: string;
+  relatedThoughts: RelatedThought[];
+  onOpen: (id: string) => void;
+  onDismiss?: () => void;
+};
+
+function EchoPanel({
+  title,
+  description,
+  relatedThoughts,
+  onOpen,
+  onDismiss,
+}: EchoPanelProps) {
+  return (
+    <section className="echo-panel" aria-labelledby={`echo-${relatedThoughts[0].entry.id}`}>
+      <div className="echo-heading">
+        <div>
+          <p className="echo-eyebrow">思考のこだま</p>
+          <h2 id={`echo-${relatedThoughts[0].entry.id}`}>{title}</h2>
+        </div>
+        {onDismiss && (
+          <button type="button" className="echo-dismiss" onClick={onDismiss} aria-label="思考のこだまを閉じる">
+            ×
+          </button>
+        )}
+      </div>
+      <p className="echo-description">{description}</p>
+      <ol className="echo-list">
+        {relatedThoughts.map(({ entry, sharedWords }) => (
+          <li key={entry.id}>
+            <button type="button" onClick={() => onOpen(entry.id)}>
+              <span className="echo-words">
+                {sharedWords.slice(0, 3).map((word) => `#${word}`).join("  ")}
+              </span>
+              <span className="echo-body">{entry.body}</span>
+              <time dateTime={entry.createdAt}>{formatDateTime(entry.createdAt)}</time>
+            </button>
+          </li>
+        ))}
+      </ol>
+      <p className="local-analysis-note">この端末内の言葉だけで見つけています</p>
     </section>
   );
 }

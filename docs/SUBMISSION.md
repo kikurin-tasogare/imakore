@@ -14,7 +14,7 @@ Apps for your life
 
 ## Short description
 
-imakore is a privacy-first thought companion for people whose minds do not stop. Instead of asking users to choose folders, tags, priorities, or deadlines, it gives them one quiet place to write. Over time, it automatically finds words that recur across thoughts and lets users return to the moments behind those themes. The current MVP runs as an installable iPhone PWA, works offline, and keeps thought data and analysis on the device.
+imakore is a privacy-first thought companion for people whose minds do not stop. Instead of asking users to choose folders, tags, priorities, or deadlines, it gives them one quiet place to write. When a new thought echoes something from the past, imakore quietly brings that earlier thought back. Over time, it also reveals recurring themes and the moments behind them. The current MVP runs as an installable iPhone PWA, works offline, and keeps thought data and analysis on the device.
 
 ## Inspiration
 
@@ -22,7 +22,7 @@ Most note and productivity tools create a second job: organizing what you just w
 
 ## What it does
 
-Users write a thought in one large field and tap “残す” (keep it). imakore records the time automatically, preserves drafts, and builds a chronological history. Once enough thoughts accumulate, it uses on-device Japanese word segmentation to surface recurring themes. Tapping a theme filters the history to the related thoughts. Users can also search, edit, delete, export, and restore their records. A removable sample dataset lets first-time visitors experience the complete insight loop immediately.
+Users write a thought in one large field and tap “残す” (keep it). imakore records the time automatically, preserves drafts, and builds a chronological history. Its signature “Thought Echo” interaction compares meaningful words locally and, when a connection exists, shows relevant past thoughts immediately after saving. Related thoughts remain explorable from each detail view. Once enough thoughts accumulate, recurring words become broader themes in the reflection view. Users can also search, edit, delete, export, and restore their records. A removable sample dataset lets first-time visitors experience the complete insight loop immediately.
 
 ## How we built it
 
@@ -39,6 +39,7 @@ The hardest design decision was deciding what not to build. A theme-analysis fea
 ## Accomplishments
 
 - A complete capture-to-insight loop with only two primary tabs
+- “Thought Echo,” an immediate bridge between a new thought and earlier ones
 - Japanese recurring-theme analysis without an external AI request
 - A realistic first-run judging experience in under 30 seconds
 - Offline installable behavior on iPhone

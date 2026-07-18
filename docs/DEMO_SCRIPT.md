@@ -20,15 +20,15 @@ Target length: **2:30–2:45**. Devpost requires a public YouTube video under th
 
 > When your mind is already full, most note apps ask you to do more work: choose a folder, a tag, a priority, or a deadline. imakore is for people who want to write first and organize nothing.
 
-### 0:15–0:40 — Capture
+### 0:15–0:50 — Capture and Thought Echo
 
-**Shot:** switch to “残す,” enter「写真を撮る時間を、もう少し大切にしたい。」and save it. Show the quiet completion feedback.
+**Shot:** load the removable sample first, switch to “残す,” enter「写真を撮る時間を、もう少し大切にしたい。」and save it. Show the quiet completion feedback followed by「思考のこだま」. Open one related thought.
 
 **Narration:**
 
-> There is one large field and one action. imakore saves the thought and timestamp automatically, clears the field, and keeps unfinished drafts if I leave.
+> There is one large field and one action. imakore saves the thought and timestamp automatically, then quietly brings back earlier thoughts that share meaningful words. I call this Thought Echo: notes store what I wrote, while imakore helps me notice what keeps returning.
 
-### 0:40–1:05 — Immediate demo experience
+### 0:50–1:05 — Immediate demo experience
 
 **Shot:** return to “振り返る.” If starting completely empty, use “サンプルで体験する.” Scroll to the insight card.
 
@@ -38,7 +38,7 @@ Target length: **2:30–2:45**. Devpost requires a public YouTube video under th
 
 ### 1:05–1:35 — Core insight loop
 
-**Shot:** tap「写真」and show only related thoughts. Open one detail, go back, then tap「音楽」.
+**Shot:** from the opened detail, show「この思考につながる記録」. Go back, tap「写真」and show the wider thought flow, then tap「音楽」.
 
 **Narration:**
 
