@@ -30,9 +30,10 @@ test("ships the focused two-tab Japanese experience", async () => {
 });
 
 test("includes installable offline app metadata", async () => {
-  const [manifestText, serviceWorker] = await Promise.all([
+  const [manifestText, serviceWorker, worker] = await Promise.all([
     readFile(new URL("public/manifest.webmanifest", root), "utf8"),
     readFile(new URL("public/sw.js", root), "utf8"),
+    readFile(new URL("worker/index.ts", root), "utf8"),
   ]);
   const manifest = JSON.parse(manifestText);
 
@@ -43,4 +44,6 @@ test("includes installable offline app metadata", async () => {
   assert.match(serviceWorker, /event\.request\.mode === "navigate"/);
   assert.match(serviceWorker, /imakore-v4/);
   assert.match(serviceWorker, /url\.origin !== self\.location\.origin/);
+  assert.match(worker, /Content-Security-Policy/);
+  assert.match(worker, /X-Content-Type-Options/);
 });
