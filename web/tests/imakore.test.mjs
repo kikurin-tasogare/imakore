@@ -11,6 +11,9 @@ test("ships the focused two-tab Japanese experience", async () => {
   assert.match(app, />残す</);
   assert.match(app, />振り返る</);
   assert.match(app, /localStorage/);
+  assert.match(app, /function readDraft\(\)/);
+  assert.match(app, /Safariの設定を確認してください/);
+  assert.doesNotMatch(app, /imakoreを読み込み中/);
   assert.match(app, /createdAt/);
   assert.match(app, /updatedAt/);
   assert.match(app, /Intl\.Segmenter/);
@@ -59,7 +62,7 @@ test("includes installable offline app metadata", async () => {
   assert.equal(manifest.lang, "ja");
   assert.match(serviceWorker, /caches\.open/);
   assert.match(serviceWorker, /event\.request\.mode === "navigate"/);
-  assert.match(serviceWorker, /imakore-v5/);
+  assert.match(serviceWorker, /imakore-v6/);
   assert.match(serviceWorker, /url\.origin !== self\.location\.origin/);
   assert.match(worker, /Content-Security-Policy/);
   assert.match(worker, /X-Content-Type-Options/);

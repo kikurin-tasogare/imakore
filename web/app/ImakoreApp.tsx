@@ -160,6 +160,14 @@ function readEntries(): ThoughtEntry[] {
   }
 }
 
+function readDraft() {
+  try {
+    return window.localStorage.getItem(DRAFT_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 function isThoughtEntry(value: unknown): value is ThoughtEntry {
   if (!value || typeof value !== "object") return false;
   const entry = value as Partial<ThoughtEntry>;
@@ -512,7 +520,6 @@ export function ImakoreApp() {
     formatDateTimeInput(suggestedReminderDate()),
   );
   const [calendarMessage, setCalendarMessage] = useState("");
-  const [isReady, setIsReady] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -520,8 +527,7 @@ export function ImakoreApp() {
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       setEntries(readEntries());
-      setDraft(window.localStorage.getItem(DRAFT_KEY) ?? "");
-      setIsReady(true);
+      setDraft(readDraft());
     });
 
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
@@ -604,16 +610,24 @@ export function ImakoreApp() {
 
   function commitEntries(next: ThoughtEntry[]) {
     setEntries(next);
-    window.localStorage.setItem(ENTRIES_KEY, JSON.stringify(next));
+    try {
+      window.localStorage.setItem(ENTRIES_KEY, JSON.stringify(next));
+    } catch {
+      setDataMessage("この端末に保存できませんでした。Safariの設定を確認してください。");
+    }
   }
 
   function updateDraft(value: string) {
     setDraft(value);
     if (value.trim()) setLastSavedId(null);
-    if (value) {
-      window.localStorage.setItem(DRAFT_KEY, value);
-    } else {
-      window.localStorage.removeItem(DRAFT_KEY);
+    try {
+      if (value) {
+        window.localStorage.setItem(DRAFT_KEY, value);
+      } else {
+        window.localStorage.removeItem(DRAFT_KEY);
+      }
+    } catch {
+      // 入力中の文章は画面内に保ち、保存領域が使えなくても操作を止めない。
     }
   }
 
@@ -793,14 +807,6 @@ export function ImakoreApp() {
     } finally {
       if (importInputRef.current) importInputRef.current.value = "";
     }
-  }
-
-  if (!isReady) {
-    return (
-      <main className="app-shell loading-shell" aria-label="imakoreを読み込み中">
-        <div className="loading-dot" />
-      </main>
-    );
   }
 
   return (

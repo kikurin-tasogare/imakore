@@ -1,4 +1,4 @@
-const CACHE_NAME = "imakore-v5";
+const CACHE_NAME = "imakore-v6";
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
