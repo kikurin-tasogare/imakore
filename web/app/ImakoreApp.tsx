@@ -238,6 +238,88 @@ function formatLongDateTime(value: string) {
   }).format(new Date(value));
 }
 
+function formatDateTimeInput(value: Date) {
+  const offset = value.getTimezoneOffset() * 60_000;
+  return new Date(value.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function suggestedReminderDate() {
+  const now = new Date();
+  const suggestion = new Date(now);
+
+  if (now.getHours() < 20) {
+    suggestion.setHours(20, 0, 0, 0);
+  } else {
+    suggestion.setDate(suggestion.getDate() + 1);
+    suggestion.setHours(9, 0, 0, 0);
+  }
+
+  return suggestion;
+}
+
+function reminderDateFor(kind: "later" | "tomorrow") {
+  const date = new Date();
+  if (kind === "later") {
+    date.setMinutes(date.getMinutes() + 60);
+    date.setMinutes(date.getMinutes() < 30 ? 30 : 60, 0, 0);
+  } else {
+    date.setDate(date.getDate() + 1);
+    date.setHours(9, 0, 0, 0);
+  }
+  return date;
+}
+
+function calendarTitle(body: string) {
+  const firstLine = body.split(/\r?\n/u).find((line) => line.trim())?.trim() ?? body.trim();
+  return Array.from(firstLine).slice(0, 45).join("");
+}
+
+function escapeCalendarText(value: string) {
+  return value
+    .replaceAll("\\", "\\\\")
+    .replaceAll("\r\n", "\\n")
+    .replaceAll("\n", "\\n")
+    .replaceAll(",", "\\,")
+    .replaceAll(";", "\\;");
+}
+
+function formatCalendarUTC(value: Date) {
+  return value.toISOString().replaceAll("-", "").replaceAll(":", "").replace(/\.\d{3}Z$/u, "Z");
+}
+
+function makeCalendarFile(entry: ThoughtEntry, startsAt: Date) {
+  const endsAt = new Date(startsAt.getTime() + 30 * 60_000);
+  const createdAt = new Date(entry.createdAt);
+  const safeId = entry.id.replace(/[^A-Za-z0-9._-]/gu, "").slice(0, 64) || crypto.randomUUID();
+  const contents = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//imakore//Future Thought//JA",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${safeId}@imakore.local`,
+    `DTSTAMP:${formatCalendarUTC(new Date())}`,
+    `CREATED:${formatCalendarUTC(createdAt)}`,
+    `DTSTART:${formatCalendarUTC(startsAt)}`,
+    `DTEND:${formatCalendarUTC(endsAt)}`,
+    `SUMMARY:${escapeCalendarText(calendarTitle(entry.body))}`,
+    `DESCRIPTION:${escapeCalendarText(`${entry.body}\n\nimakoreから`)}`,
+    "BEGIN:VALARM",
+    "ACTION:DISPLAY",
+    "TRIGGER:-PT10M",
+    `DESCRIPTION:${escapeCalendarText(calendarTitle(entry.body))}`,
+    "END:VALARM",
+    "END:VEVENT",
+    "END:VCALENDAR",
+    "",
+  ].join("\r\n");
+
+  return new File([contents], "imakore-calendar.ics", {
+    type: "text/calendar;charset=utf-8",
+  });
+}
+
 function meaningfulWords(body: string): string[] {
   const words = new Set<string>();
 
@@ -425,6 +507,11 @@ export function ImakoreApp() {
   const [dataMessage, setDataMessage] = useState("");
   const [savedMessage, setSavedMessage] = useState(false);
   const [lastSavedId, setLastSavedId] = useState<string | null>(null);
+  const [calendarEntry, setCalendarEntry] = useState<ThoughtEntry | null>(null);
+  const [reminderDate, setReminderDate] = useState(() =>
+    formatDateTimeInput(suggestedReminderDate()),
+  );
+  const [calendarMessage, setCalendarMessage] = useState("");
   const [isReady, setIsReady] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -446,6 +533,17 @@ export function ImakoreApp() {
       if (savedTimer.current) clearTimeout(savedTimer.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!calendarEntry) return;
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setCalendarEntry(null);
+    }
+
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [calendarEntry]);
 
   const sortedEntries = useMemo(
     () =>
@@ -545,6 +643,46 @@ export function ImakoreApp() {
     setSelectedId(id);
     setEditing(false);
     window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  function openCalendarSheet(entry: ThoughtEntry) {
+    setCalendarEntry(entry);
+    setReminderDate(formatDateTimeInput(suggestedReminderDate()));
+    setCalendarMessage("");
+  }
+
+  async function handToCalendar() {
+    if (!calendarEntry) return;
+    const startsAt = new Date(reminderDate);
+    if (Number.isNaN(startsAt.getTime()) || startsAt.getTime() <= Date.now()) {
+      setCalendarMessage("これからの日時を選んでください。");
+      return;
+    }
+
+    const file = makeCalendarFile(calendarEntry, startsAt);
+    try {
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: calendarTitle(calendarEntry.body),
+          text: "未来の自分に渡す予定です。",
+        });
+        setCalendarMessage("共有先で予定ファイルを開き、カレンダーに追加してください。");
+        return;
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+    }
+
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+    setCalendarMessage("予定ファイルを開き、「追加」を押してください。");
   }
 
   function beginEditing() {
@@ -682,6 +820,7 @@ export function ImakoreApp() {
             onCancelEditing={() => setEditing(false)}
             onSaveEdit={saveEdit}
             onDelete={deleteEntry}
+            onHandToFuture={() => openCalendarSheet(selectedEntry)}
             relatedThoughts={selectedEntryEchoes}
             onOpenRelated={openEntry}
           />
@@ -936,6 +1075,87 @@ export function ImakoreApp() {
             </button>
           </nav>
         )}
+
+
+        {calendarEntry && (
+          <div
+            className="calendar-sheet-backdrop"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setCalendarEntry(null);
+            }}
+          >
+            <section
+              className="calendar-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="calendar-sheet-title"
+            >
+              <div className="sheet-handle" aria-hidden="true" />
+              <button
+                type="button"
+                className="sheet-close"
+                onClick={() => setCalendarEntry(null)}
+                aria-label="未来の自分に渡す画面を閉じる"
+              >
+                ×
+              </button>
+              <p className="sheet-eyebrow">未来の自分に渡す</p>
+              <h2 id="calendar-sheet-title">いつ、もう一度思い出す？</h2>
+              <p className="sheet-description">
+                今すぐ決めなくても大丈夫。選んだときだけAppleカレンダーへ渡します。
+              </p>
+
+              <div className="reminder-shortcuts" aria-label="思い出す日時の候補">
+                <button
+                  type="button"
+                  onClick={() => setReminderDate(formatDateTimeInput(reminderDateFor("later")))}
+                >
+                  このあと
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReminderDate(formatDateTimeInput(reminderDateFor("tomorrow")))}
+                >
+                  明日の朝
+                </button>
+              </div>
+
+              <label className="reminder-date-label" htmlFor="reminder-date">
+                日時を選ぶ
+              </label>
+              <input
+                id="reminder-date"
+                className="reminder-date-input"
+                type="datetime-local"
+                value={reminderDate}
+                min={formatDateTimeInput(new Date())}
+                onChange={(event) => {
+                  setReminderDate(event.target.value);
+                  setCalendarMessage("");
+                }}
+              />
+
+              <div className="calendar-preview">
+                <span>予定名</span>
+                <strong>{calendarTitle(calendarEntry.body)}</strong>
+                <small>30分の予定・10分前に通知</small>
+              </div>
+
+              <button className="primary-button" type="button" onClick={() => void handToCalendar()}>
+                Appleカレンダーに渡す
+              </button>
+              <p className="calendar-privacy-note">
+                内容は外部サーバーへ送らず、この端末で予定ファイルを作ります。
+              </p>
+              {calendarMessage && (
+                <p className="calendar-message" role="status" aria-live="polite">
+                  {calendarMessage}
+                </p>
+              )}
+            </section>
+          </div>
+        )}
       </div>
     </main>
   );
@@ -951,6 +1171,7 @@ type DetailViewProps = {
   onCancelEditing: () => void;
   onSaveEdit: () => void;
   onDelete: () => void;
+  onHandToFuture: () => void;
   relatedThoughts: RelatedThought[];
   onOpenRelated: (id: string) => void;
 };
@@ -965,6 +1186,7 @@ function DetailView({
   onCancelEditing,
   onSaveEdit,
   onDelete,
+  onHandToFuture,
   relatedThoughts,
   onOpenRelated,
 }: DetailViewProps) {
@@ -1020,6 +1242,16 @@ function DetailView({
           <span>残した日時</span>
           <time dateTime={entry.createdAt}>{formatLongDateTime(entry.createdAt)}</time>
         </div>
+
+        {!editing && (
+          <button type="button" className="future-button" onClick={onHandToFuture}>
+            <span className="future-icon" aria-hidden="true">↗</span>
+            <span>
+              <strong>未来の自分に渡す</strong>
+              <small>思い出したい日時を選ぶ</small>
+            </span>
+          </button>
+        )}
 
         {!editing && relatedThoughts.length > 0 && (
           <EchoPanel

@@ -992,6 +992,202 @@ textarea:focus {
   font-size: 0.9rem;
 }
 
+.future-button {
+  width: 100%;
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 28px;
+  padding: 13px 15px;
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--hairline));
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 110ms ease, background 110ms ease;
+}
+
+.future-button:active {
+  transform: scale(0.985);
+  background: color-mix(in srgb, var(--accent) 11%, var(--surface));
+}
+
+.future-button > span:last-child {
+  display: grid;
+  gap: 4px;
+}
+
+.future-button strong {
+  font-size: 0.9rem;
+}
+
+.future-button small {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.future-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.calendar-sheet-backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-top: env(safe-area-inset-top);
+  background: rgba(0, 0, 0, 0.42);
+  animation: backdrop-in 160ms ease-out;
+}
+
+.calendar-sheet {
+  position: relative;
+  width: min(100%, 600px);
+  max-height: calc(100dvh - env(safe-area-inset-top));
+  overflow-y: auto;
+  padding: 16px 22px calc(24px + env(safe-area-inset-bottom));
+  border-radius: 24px 24px 0 0;
+  background: var(--surface);
+  box-shadow: 0 -16px 60px rgba(0, 0, 0, 0.18);
+  animation: sheet-in 210ms ease-out;
+}
+
+.sheet-handle {
+  width: 36px;
+  height: 5px;
+  margin: 0 auto 22px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--muted) 38%, transparent);
+}
+
+.sheet-close {
+  position: absolute;
+  top: 22px;
+  right: 18px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sheet-eyebrow {
+  margin: 0 44px 7px 0;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.calendar-sheet h2 {
+  margin: 0 44px 0 0;
+  font-size: 1.24rem;
+  line-height: 1.45;
+}
+
+.sheet-description {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.65;
+}
+
+.reminder-shortcuts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 20px;
+}
+
+.reminder-shortcuts button {
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--hairline));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reminder-date-label {
+  display: block;
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.reminder-date-input {
+  width: 100%;
+  min-height: 50px;
+  margin-top: 7px;
+  padding: 0 13px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface-subtle);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.calendar-preview {
+  display: grid;
+  gap: 5px;
+  margin-top: 17px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: var(--surface-subtle);
+}
+
+.calendar-preview span,
+.calendar-preview small {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.calendar-preview strong {
+  font-size: 0.84rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.calendar-privacy-note,
+.calendar-message {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 0.68rem;
+  line-height: 1.55;
+}
+
+.calendar-privacy-note {
+  color: var(--muted);
+}
+
+.calendar-message {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .delete-button {
   min-height: 44px;
   margin-top: 38px;
@@ -1120,4 +1316,14 @@ textarea:focus {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sheet-in {
+  from { transform: translateY(24px); }
+  to { transform: translateY(0); }
 }

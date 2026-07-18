@@ -37,7 +37,13 @@ test("ships the focused two-tab Japanese experience", async () => {
   assert.match(app, /new Set\(themeWords\(target\.body\)\)/);
   assert.match(app, /candidateWords = themeWords\(entry\.body\)/);
   assert.match(app, /MAX_IMPORT_BYTES/);
-  assert.doesNotMatch(app, /締切|優先度|タグ|カレンダー/);
+  assert.match(app, /未来の自分に渡す/);
+  assert.match(app, /Appleカレンダーに渡す/);
+  assert.match(app, /BEGIN:VCALENDAR/);
+  assert.match(app, /BEGIN:VALARM/);
+  assert.match(app, /TRIGGER:-PT10M/);
+  assert.match(app, /navigator\.share/);
+  assert.doesNotMatch(app, /締切|優先度|タグ/);
 });
 
 test("includes installable offline app metadata", async () => {
@@ -53,7 +59,7 @@ test("includes installable offline app metadata", async () => {
   assert.equal(manifest.lang, "ja");
   assert.match(serviceWorker, /caches\.open/);
   assert.match(serviceWorker, /event\.request\.mode === "navigate"/);
-  assert.match(serviceWorker, /imakore-v4/);
+  assert.match(serviceWorker, /imakore-v5/);
   assert.match(serviceWorker, /url\.origin !== self\.location\.origin/);
   assert.match(worker, /Content-Security-Policy/);
   assert.match(worker, /X-Content-Type-Options/);
