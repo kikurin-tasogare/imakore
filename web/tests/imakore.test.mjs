@@ -20,7 +20,10 @@ test("ships the focused two-tab Japanese experience", async () => {
   assert.match(app, /思考を検索/);
   assert.match(app, /exportEntries/);
   assert.match(app, /importEntries/);
-  assert.match(app, /この端末内だけで分析しています/);
+  assert.match(app, /一般的な言葉を除いて端末内で分析しています/);
+  assert.match(app, /THEME_ANALYSIS_WINDOW/);
+  assert.match(app, /THEME_STOP_WORDS/);
+  assert.match(app, /HAS_TOPIC_CHARACTER/);
   assert.match(app, /思考のこだま/);
   assert.match(app, /前にも、似た思考がありました/);
   assert.match(app, /この思考につながる記録/);

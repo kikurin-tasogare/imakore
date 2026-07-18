@@ -27,6 +27,7 @@ type RelatedThought = {
 const ENTRIES_KEY = "imakore.thoughts.v1";
 const DRAFT_KEY = "imakore.draft.v1";
 const MINIMUM_ENTRIES_FOR_INSIGHTS = 3;
+const THEME_ANALYSIS_WINDOW = 40;
 const MAX_IMPORT_BYTES = 1_000_000;
 const MAX_IMPORT_ENTRIES = 5_000;
 const MAX_IMPORTED_BODY_CHARACTERS = 20_000;
@@ -79,6 +80,31 @@ const STOP_WORDS = new Set([
   "思う",
   "思って",
 ]);
+const THEME_STOP_WORDS = new Set([
+  "いつも",
+  "いま",
+  "これから",
+  "できる",
+  "なんか",
+  "ちょっと",
+  "やっぱり",
+  "今回",
+  "時間",
+  "本当",
+  "本当に",
+  "大切",
+  "感じ",
+  "思考",
+  "考える",
+  "考えて",
+  "言葉",
+  "毎日",
+  "明日",
+  "昨日",
+  "全部",
+  "必要",
+]);
+const HAS_TOPIC_CHARACTER = /[\p{Script=Han}\p{Script=Katakana}A-Za-z]/u;
 
 function readEntries(): ThoughtEntry[] {
   try {
@@ -189,6 +215,12 @@ function meaningfulWords(body: string): string[] {
   return [...words];
 }
 
+function themeWords(body: string): string[] {
+  return meaningfulWords(body).filter(
+    (word) => HAS_TOPIC_CHARACTER.test(word) && !THEME_STOP_WORDS.has(word),
+  );
+}
+
 function findRelatedThoughts(
   target: ThoughtEntry,
   entries: ThoughtEntry[],
@@ -225,18 +257,31 @@ function findRelatedThoughts(
 function analyzeThemes(entries: ThoughtEntry[]): ThemeInsight[] {
   if (entries.length < MINIMUM_ENTRIES_FOR_INSIGHTS) return [];
 
+  const recentEntries = [...entries]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
+    .slice(0, THEME_ANALYSIS_WINDOW);
   const themes = new Map<
     string,
-    { entryIds: Set<string>; occurrences: number }
+    { entryIds: Set<string>; occurrences: number; recencyScore: number }
   >();
-  entries.forEach((entry) => {
-    meaningfulWords(entry.body).forEach((word) => {
+  recentEntries.forEach((entry, index) => {
+    const recencyWeight = Math.max(
+      0.25,
+      1 - index / Math.max(recentEntries.length, 1),
+    );
+
+    themeWords(entry.body).forEach((word) => {
       const current = themes.get(word) ?? {
         entryIds: new Set<string>(),
         occurrences: 0,
+        recencyScore: 0,
       };
       current.occurrences += 1;
       current.entryIds.add(entry.id);
+      current.recencyScore += recencyWeight;
       themes.set(word, current);
     });
   });
@@ -244,8 +289,11 @@ function analyzeThemes(entries: ThoughtEntry[]): ThemeInsight[] {
   return [...themes.entries()]
     .filter(([, value]) => value.entryIds.size >= 2)
     .sort((a, b) => {
-      const entryDifference = b[1].entryIds.size - a[1].entryIds.size;
-      return entryDifference || b[1].occurrences - a[1].occurrences;
+      const score = (word: string, value: (typeof a)[1]) =>
+        value.entryIds.size * 2 +
+        value.recencyScore +
+        Math.min(Array.from(word).length, 8) * 0.08;
+      return score(b[0], b[1]) - score(a[0], a[1]);
     })
     .slice(0, 3)
     .map(([word, value]) => ({
@@ -631,7 +679,9 @@ export function ImakoreApp() {
                         </button>
                       ))}
                     </div>
-                    <p className="local-analysis-note">この端末内だけで分析しています</p>
+                    <p className="local-analysis-note">
+                      最近の記録から、一般的な言葉を除いて端末内で分析しています
+                    </p>
                   </section>
                 )}
 
