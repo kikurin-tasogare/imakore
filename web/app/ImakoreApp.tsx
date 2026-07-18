@@ -226,13 +226,13 @@ function findRelatedThoughts(
   entries: ThoughtEntry[],
   limit = 3,
 ): RelatedThought[] {
-  const targetWords = new Set(meaningfulWords(target.body));
+  const targetWords = new Set(themeWords(target.body));
   if (targetWords.size === 0) return [];
 
   return entries
     .filter((entry) => entry.id !== target.id)
     .map((entry) => {
-      const candidateWords = meaningfulWords(entry.body);
+      const candidateWords = themeWords(entry.body);
       const sharedWords = candidateWords.filter((word) => targetWords.has(word));
       const sharedCharacterCount = sharedWords.reduce(
         (total, word) => total + Array.from(word).length,

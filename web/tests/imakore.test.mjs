@@ -28,6 +28,8 @@ test("ships the focused two-tab Japanese experience", async () => {
   assert.match(app, /前にも、似た思考がありました/);
   assert.match(app, /この思考につながる記録/);
   assert.match(app, /findRelatedThoughts/);
+  assert.match(app, /new Set\(themeWords\(target\.body\)\)/);
+  assert.match(app, /candidateWords = themeWords\(entry\.body\)/);
   assert.match(app, /MAX_IMPORT_BYTES/);
   assert.doesNotMatch(app, /締切|優先度|タグ|カレンダー/);
 });
